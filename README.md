@@ -306,6 +306,12 @@ Going back to the gdb session, we find a good candidate at address *4012a9*:
 ![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/be_brave.png)
   
 Combining that with a small `NOP` sled and the useful `jmp rsi`, our lower part of stack would look something like this:
+![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/be_brave2.PNG)  
+  
+The original return address is at *7fffffffe458*. The CPU is simply loading whatever is in that address to the RIP register.  
+So, the next execution would be the code at *0x4012a9*:
 
-
+`pop rbx`   - this opcode would consume the next 8 bytes of the stack, and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*. 
+`ret`       - this opcode, again, takes the contents of the stack, where the RSP points to, and loads it to RIP...
+So, we'll be sliding down the stack using
 
