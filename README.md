@@ -384,7 +384,14 @@ a:  48 c7 c7 05 00 00 00    mov    rdi,0x5                  # <<< FD of flag.txt
 ```  
   
   
-We are using [exploit.c](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/exploit.c) on the client side.
-  
+We are using [exploit.c](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/exploit.c) on the client side.  
+Run `exploit.c` with the following parameters:  
+`./exploit <byte # in flag> [-]<charset>`
+
+- byte # starts at 1
+- `charset` can be 0, 1 or 2
+- use -0, -1, -2 in `charset` to take the `charset` in reverse
+
+--------------------------------------------------------------------------------------------------------------------
 The flag is:  
 **KCTF{D0NT_T3LL_4NY_1}**  
