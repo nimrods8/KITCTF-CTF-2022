@@ -66,11 +66,17 @@ These gcc flags are important:
   
 To summarize: these flags tell us two things -   
 - The server's stack is, intentionally, made exploitable, and  
-- The ELF code addresses are intentionally made constant, regardless of ASLR.
+- The ELF code addresses are intentionally made constant, regardless of ASLR.  
   
   
     
 *(3) Stack overflow exploitation - step 1*  
 We begin by analyzing the `main` stack just before it is returning:  
-![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/koeri_atret.png)  
+![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/koeri_atret.png)   
+
+Just before executing the `ret` instruction the `rsp` (marked in a yellow rectangle) would be pointing to the return address at 7fffffffe458 (marked in red).  
+The `rsi` points to the beginning of `buffer`.  
+So, if we count the bytes from `rsi`, i.e. 7fffffffe340 to the return address at 7fffffffe458 we get the number of bytes we should fill in order to be able to control the return address of the code, or a code execution primitive. This equals **0x88 bytes**.  
+To summarize, now know how many bytes we need to fill in order to gain a code execution primitive (which is 0x88) and we can also see that this is feasible as far as the `read` is concerned, which would willingly read upto 0x1000 bytes...  
+
 
