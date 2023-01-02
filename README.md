@@ -65,9 +65,12 @@ These gcc flags are important:
 **no-pie** flag tells gcc that the output should not be position independent (Position Independent Execution). For our purposes, this means that all the code that goes with the `main` ELF will always be loaded to the same addresses in memory and the Linux loader will not be able to randomize its addresses. It does *not* mean that libraries (.so files) will be loaded into non-randomized addresses...
   
 To summarize: these flags tell us two things -   
-(1) The server's stack is, intentionally, made exploitable, and  
-(2) The ELF code addresses are intentionally made constant, regardless of ASLR.
+- The server's stack is, intentionally, made exploitable, and  
+- The ELF code addresses are intentionally made constant, regardless of ASLR.
   
   
+    
 *(3) Stack overflow exploitation - step 1*  
-We begin by analyzing the `main` stack just before it is returning:
+We begin by analyzing the `main` stack just before it is returning:  
+![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/koeri_atret.png)  
+
