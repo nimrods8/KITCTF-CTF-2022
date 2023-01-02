@@ -296,15 +296,16 @@ Let's take a couple of examples:
 When the return address is located at E418, for example, the stack address at E418+0xF8=E510 would point to E500 (after we write 0x00 in the least significant byte), so we can use this to slide **back** to E500 and run code there. In this example, we need to place our shellcode for execution at location +0xF8 inside `buffer`.  
 If the return address is located at E4A8, for example, the target stack address would be at E4A8+0xF8=E5A0, and after writing 0x00  in the least significant byte we can slide **back** to E500 and run code there. However, notice that this time, E500 would only be location 0x58 inside `buffer`.
   
-To summarize: we can use a specific stack address to jump back to a location we control and eventually execute our code, by zeroing the least significant byte of that stack address. However, we need to somehow, within 0x10 bytes, slide to that address first, and also prepare our shellcode in multiple locations, so that no matter where the original return address is located on the stack, we would have shellcode waiting to be executed.
+To summarize: we can use a specific stack address to jump back to a location we control and eventually execute our code, by zeroing the least significant byte of that stack address. However, we need to somehow slide, within 0x10 bytes, to that address first, and also prepare our shellcode in multiple locations, so that no matter where the original return address is located on the stack, we would have shellcode waiting to be executed.  Since we are running on the stack we can easily use a `pop-ret` constellation to achieve that.  
   
-So, now we know where to go, we need to find a way to execute on stack down to Return Address + 0xF8 and, but how do we get there?
+So, now we know where to go, we need to find a way to execute on stack down to Return Address + 0xF8, but how do we get there?
   
 If you recall, the server's code is compiled with **no-pie**, that means that `main` addresses remain constant and absolute. That means we can point execution to any address we want within the ELF.  
     
-Going back to the gdb session, we find a good candidate:
+Going back to the gdb session, we find a good candidate at address *4012a9*:
 ![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/be_brave.png)
   
-  
+Combining that with a small `NOP` sled and the useful `jmp rsi`, our lower part of stack would look something like this:
+
 
 
