@@ -384,7 +384,7 @@ a:  48 c7 c7 05 00 00 00    mov    rdi,0x5                  # <<< FD of flag.txt
 ```  
   
   
-We are using `exploit.c` on the client side.
+We are using [exploit.c](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/exploit.c) on the client side.
   
 The flag is:  
 **KCTF{D0NT_T3LL_4NY_1}**  
