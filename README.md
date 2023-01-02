@@ -185,7 +185,7 @@ Since we could not find gadgets in good proximity to the original return address
 *(c) Find another address in stack we can use - or **Live Off the Land*** 
 Next, we looked into the stack, from the original return address and downwards (i.e. addresses increasing), to see if we can find *interesting* addresses pointing to the stack that we can use. On our gdb session, stack addresses begin with *7fffff...*:  
   
-![Stack Dump]()
+![Stack Dump](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/stack1.png)
 
   
   
