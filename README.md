@@ -88,6 +88,16 @@ We have a number of options:
 - Find another address already in the stack that we can slightly change to cause a beneficial code execution to us.  
 
  
+*Testing for Static Stack Addresses*
+gdb is, by default, disabling ASLR, so we can see the static stack addresses there.
+By running `info proc mappings` we get:
+`0x7ffffffde000     0x7ffffffff000    0x21000        0x0  rwxp   [stack]`  
+  
+So, the stack starts at 0x7fffffffde000, is executable and ends 21,000 hex bytes later. The address of `buffer` on the stack, as we could see in our gdb, was *7fffffffe3d0*, but this address may be different on the server (due to different environment variables, for example).
+So we decided to try and (gently) "brute-force" the lower 2 bytes of the stack address and see if we get a favorable response from the server...  
+But what's a favorable response?  
+We know the server is using `socat` to wait for an incoming TCP connection and then run `main`.  
+`main` is then reading information from `stdin` and writes it to `buffer`. We can tell when `main` stops executing if we look at the TCP connection, for example, using *Wireshark*:  
 
 
 
