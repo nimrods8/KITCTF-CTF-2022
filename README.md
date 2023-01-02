@@ -12,6 +12,7 @@ Now to the challenge:<br><br>
 We start with `main.c`:
 
 ```
+[...redacted...]
 #define ALARM_SECONDS 10
 
 void be_a_ctf_challenge() {
@@ -44,24 +45,29 @@ The main function is setting up a timeout of 10 seconds. This is the time frame 
 Then, allocates 100 bytes for `buf` on the stack, opens the flag.txt file, reports to the client the file descriptor (fd) of the opened file and sets the sandbox using `seccomp`: all syscalls are banned but the `read` syscall!<br><br>
 At the bottom `main` is reading from `stdin` upto 0x1000 bytes. 
 <br>
-*This is clearly a stack overflow waiting to happen!*
-<br> 
-<br>
+*This is clearly a stack overflow waiting to happen!*  
+  
 *(2) We have a stack overflow, can we exploit it?*
-<br>
-In order to answer that question we need to look at how `main.c` is built.
-<br>
-We were given the `Makefile` of `main.c`, and here is what it does:
-<br><br>
-```
-        gcc main.c -o main -lseccomp -fno-stack-protector -z execstack -no-pie
-```
-<br>
-These gcc flags are important. <br>
-`no-stack-protector` flag removes stack (canaries)[https://www.sans.org/blog/stack-canaries-gingerly-sidestepping-the-cage/], an important anti-stack-smashing protection. 
-<br>
-`execstack` flag allows code to run on the stack (this marks the stack memory region as `x` or executable).
-<br>
-`no-pie` flag tells gcc that the output should not be position independent (Position Independent Execution). For our purposes, this means that all the code that goes with the `main` ELF will always be loaded to the same addresses in memory and the Linux loader will not be able to randomize its addresses. It does *not* mean that libraries (.so files) will be loaded into non-randomized addresses...
-<br>
 
+In order to answer that question we need to look at how `main.c` is built.
+
+We were given the `Makefile` of `main.c`, and here is what it does:
+
+```
+gcc main.c -o main -lseccomp -fno-stack-protector -z execstack -no-pie
+```
+
+These gcc flags are important:  
+**no-stack-protector** flag removes stack [canaries](https://www.sans.org/blog/stack-canaries-gingerly-sidestepping-the-cage/), an important anti-stack-smashing protection. 
+
+**execstack** flag allows code to run on the stack (this marks the stack memory region as `x` or executable).
+
+**no-pie** flag tells gcc that the output should not be position independent (Position Independent Execution). For our purposes, this means that all the code that goes with the `main` ELF will always be loaded to the same addresses in memory and the Linux loader will not be able to randomize its addresses. It does *not* mean that libraries (.so files) will be loaded into non-randomized addresses...
+  
+To summarize: these flags tell us two things -   
+(1) The server's stack is, intentionally, made exploitable, and  
+(2) The ELF code addresses are intentionally made constant, regardless of ASLR.
+  
+  
+*(3) Stack overflow exploitation - step 1*  
+We begin by analyzing the `main` stack just before it is returning:
