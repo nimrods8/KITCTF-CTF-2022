@@ -392,6 +392,9 @@ Run `exploit.c` with the following parameters:
 - `charset` can be 0, 1 or 2
 - use -0, -1, -2 in `charset` to take the `charset` in reverse
 
+For example: `./exploit 3 -1`
+Run the full exploit, comparing to flag byte #3 and with reverse lowercaps charset
+
 --------------------------------------------------------------------------------------------------------------------
 The flag is:  
 **KCTF{D0NT_T3LL_4NY_1}**  
