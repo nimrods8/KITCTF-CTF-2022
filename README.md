@@ -182,7 +182,10 @@ The `main` returns to address *7ffff7d86d90*, which is 0x1d90 from the beginning
 Since we could not find gadgets in good proximity to the original return address (closest was at zero based address 0x2b8ba), we decided to drop this option and try the third one.  
   
   
-*(c) Find another address in stack we can use - or _Live Off the Land_*
+*(c) Find another address in stack we can use - or **Live Off the Land*** 
+Next, we looked into the stack, from the original return address and downwards (i.e. addresses increasing), to see if we can find *interesting* addresses pointing to the stack that we can use. On our gdb session, stack addresses begin with *7fffff...*:  
+  
+![Stack Dump]()
 
   
   
