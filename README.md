@@ -288,10 +288,23 @@ E4D8                            E5D0                                    E500    
 E4E8                            E5E0                                    E500            *
 E4F8                            E5F0                                    E500            *
 ```
-In this case we can clearly see that 15 our of 16 of the values, when writing 0x00 at the lowest byte of the stack address, we would get a stack address **above** our current address, hence we can use it to point execution to our code!
+In this case we can clearly see that 15 our of 16 of the values, when writing 0x00 at the lowest byte of the stack address, we would get a stack address **above** our current address, hence we can use it to point execution to our code! 
+  
+The next step requires some concentration:  
+With every return address, after we write zero over the lowest byte of the stack address at address +0xF8, we get a different location in stack!!!  
+Let's take a couple of examples:  
+When the return address is located at E418, for example, the stack address at E418+0xF8=E510 would point to E500 (after we write 0x00 in the least significant byte), so we can use this to slide **back** to E500 and run code there. In this example, we need to place our shellcode for execution at location +0xF8 inside `buffer`.  
+If the return address is located at E4A8, for example, the target stack address would be at E4A8+0xF8=E5A0, and after writing 0x00  in the least significant byte we can slide **back** to E500 and run code there. However, notice that this time, E500 would only be location 0x58 inside `buffer`.
+  
+To summarize: we can use a specific stack address to jump back to a location we control and eventually execute our code, by zeroing the least significant byte of that stack address. However, we need to somehow, within 0x10 bytes, slide to that address first, and also prepare our shellcode in multiple locations, so that no matter where the original return address is located on the stack, we would have shellcode waiting to be executed.
   
 So, now we know where to go, we need to find a way to execute on stack down to Return Address + 0xF8 and, but how do we get there?
   
 If you recall, the server's code is compiled with **no-pie**, that means that `main` addresses remain constant and absolute. That means we can point execution to any address we want within the ELF.  
+    
+Going back to the gdb session, we find a good candidate:
+![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/be_brave.png)
+  
+  
 
 
