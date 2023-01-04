@@ -101,7 +101,7 @@ We know the server is using `socat` to wait for an incoming TCP connection and t
 
 ![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/Capture1.PNG)  
 
-The server sends a FIN packet when `main` stops execution. This is because `socat` signals the client that it cannot send anymore packets (by sending FIN), however, `socat` is still receiving, even though `main` has stopped.  
+The server sends a FIN packet when `main` stops execution. This is because `socat` signals the client that it cannot send anymore packets (by sending FIN), however, `socat` is still receiving, even though `main` has stopped, so the connection remains open.  
   
 By sending the following code bytes to the server we are able to check if we can run code using stack addresses:
   
