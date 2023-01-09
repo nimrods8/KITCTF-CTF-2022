@@ -182,12 +182,13 @@ The `main` returns to address *7ffff7d86d90*, which is 0x1d90 from the beginning
 Since we could not find gadgets in good proximity to the original return address (closest was at zero based address 0x2b8ba), we decided to drop this option and try the third one.  
   
   
-*(c) Find another address in stack we can use - or **Live Off the Land*** 
-Next, we looked into the stack, from the original return address and downwards (i.e. addresses increasing), to see if we can find *interesting* addresses pointing to the stack that we can use. On our gdb session, stack addresses begin with *7fffff...*:  
+*(c) Find another address in stack we can use - or **Live Off the Land***   
+Next, we looked into the stack, from the original return address and downwards (i.e. addresses increasing), to see if we can find *interesting* addresses pointing to the stack that we can use.  
+On our gdb session, stack addresses begin with *7fffff...*:  
   
-![Stack Dump](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/stack1.png)
-  
-If we take the original return address as address 00, we can write the following:
+![Stack Dump](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/stack1.png)  
+    
+Writing these down, if we take the original return address as address 00, we can write the following:
 
 ```
 +0x00     Return Address
@@ -198,8 +199,8 @@ If we take the original return address as address 00, we can write the following
 +0xF8     Points to Stack at 00 + 0x100 
 ```
   
-The general idea is to have the server executing down to our selected area at the stack, and then, by writing over as little as possible of the target address, point execution back to a higher (decreased) stack area and execute our code from there.
-But how do we know which one of these stack addresses is best for us?
+The general idea is to have the server executing down to our selected area at the stack, and then, by writing over as little as possible of the target address, point execution back to a higher (decreased) stack area and execute our code from there.  
+But how do we know which one of these stack addresses is best for us (given the fact that the actual stack addresses are unknown)?  
 
 To help us decide, we've written this short C# code:  
 ```
@@ -287,13 +288,14 @@ E4C8                            E5C0                                    E500    
 E4D8                            E5D0                                    E500            *
 E4E8                            E5E0                                    E500            *
 E4F8                            E5F0                                    E500            *
-```
+```  
+  
 In this case we can clearly see that 15 our of 16 of the values, when writing 0x00 at the lowest byte of the stack address, we would get a stack address **above** our current address, hence we can use it to point execution to our code! 
   
-The next step requires some concentration:  
+The next step requires some concentration:   
 With every return address, after we write zero over the lowest byte of the stack address at address +0xF8, we get a different location in stack!!!  
 Let's take a couple of examples:  
-When the return address is located at E418, for example, the stack address at E418+0xF8=E510 would point to E500 (after we write 0x00 in the least significant byte), so we can use this to slide **back** to E500 and run code there. In this example, we need to place our shellcode for execution at location +0xF8 inside `buffer`.  
+If `main's` return address is located at E418, for example, the stack address at E418+0xF8=E510 would point to E500 (after we write 0x00 in the least-significant byte), so we can use this to slide **back** to E500 and run code there. In this example, we need to place our shellcode for execution at location +0xF8 inside `buffer`.  
 If the return address is located at E4A8, for example, the target stack address would be at E4A8+0xF8=E5A0, and after writing 0x00  in the least significant byte we can slide **back** to E500 and run code there. However, notice that this time, E500 would only be location 0x58 inside `buffer`.
   
 To summarize: we can use a specific stack address to jump back to a location we control and eventually execute our code, by zeroing the least significant byte of that stack address. However, we need to somehow slide, within 0x10 bytes, to that address first, and also prepare our shellcode in multiple locations, so that no matter where the original return address is located on the stack, we would have shellcode waiting to be executed.  Since we are running on the stack we can easily use a `pop-ret` constellation to achieve that.  
