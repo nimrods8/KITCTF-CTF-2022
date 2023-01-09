@@ -188,7 +188,7 @@ On our gdb session, stack addresses begin with *7fffff...*:
   
 ![Stack Dump](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/stack1.png)  
     
-Writing these down, if we take the original return address as address 00, we can write the following:
+Writing these down, if we take the original return address as address 00, we get the following:
 
 ```
 +0x00     Return Address
