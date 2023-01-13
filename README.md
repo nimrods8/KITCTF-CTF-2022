@@ -313,7 +313,7 @@ Combining that with a small `NOP` sled and the useful `jmp rsi`, our lower part 
 The original return address is at *7fffffffe458*. The CPU is simply loading whatever is in that address to the RIP register.  
 So, the next execution would be the code at *0x4012a9*:
 
-`pop rbx`   - this opcode would consume the next 8 bytes of the stack, and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*. 
+`pop rbx`   - this opcode would consume the next 8 bytes of the stack, and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*.  
 `ret`       - this opcode, again, takes the contents of the stack, where the RSP points to, and loads it to RIP...
 So, we'll be sliding down the stack using return-oriented-execution from `main` itself.  
   
