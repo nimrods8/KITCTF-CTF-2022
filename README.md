@@ -77,15 +77,15 @@ We begin by analyzing the `main` stack just before it is returning:
 Just before executing the `ret` instruction the `rsp` (marked in a yellow rectangle) would be pointing to the return address at *7fffffffe458* (marked in red).  
 The `rsi` points to the beginning of `buffer`.  
 So, if we count the bytes from `rsi`, i.e. *7fffffffe340* to the return address at *7fffffffe458* we get the number of bytes we should fill in order to be able to control the return address of the code, or a code execution primitive. This equals **0x88 bytes**.  
-To summarize, now know how many bytes we need to fill in order to gain a code execution primitive (which is 0x88) and we can also see that this is feasible as far as the `read` is concerned, which would willingly read upto 0x1000 bytes...  
+To summarize, we now know how many bytes we need to fill in order to gain a code execution primitive (which is 0x88) and we can also see that this is feasible as far as the `read` is concerned, which would willingly read upto 0x1000 bytes...  
   
   
 *(4) Stack overflow exploitation - step 2*  
-Now that we know how to gain code execution on the server we should come up with what to write there.  
+Now that we know how to gain code execution on the server we should come up with what to write there.   
 We have a number of options:  
-- If the server has completely disabled ASLR, then we can probably write a static stack address and by doing that point the execution of the server to another area of the stack. We can do that because the stack was marked executable.
+- If the server has completely disabled ASLR, then we can probably write a static stack address and by doing that point the execution of the server to another area of the stack that we control. We can do that because the stack was marked executable.
 - If ASLR is still on then it would be quite difficult to guess the randomized stack address, in order to divert execution to the stack. In this case, we may be able to take advantage of the address already coded in the return address (*7ffff7d86d90* in this gdb case) and perhaps return there...
-- Find another address already in the stack that we can slightly change to cause a beneficial code execution to us.  
+- Another option is to find another address already in the stack that we can slightly change to cause a beneficial code execution to us.  
 
  
 *(a) Testing for Static Stack Addresses*
@@ -96,7 +96,7 @@ By running `info proc mappings` we get:
 So, the stack starts at 0x7fffffffde000, is executable and ends 21,000 hex bytes later. The address of `buffer` on the stack, as we could see in our gdb, was *7fffffffe3d0*, but this address may be different on the server (due to different environment variables, for example).
 So we decided to try and (gently) "brute-force" the lower 2 bytes of the stack address and see if we get a favorable response from the server...  
 But what's a favorable response?  
-We know the server is using `socat` to wait for an incoming TCP connection and then run `main`.  
+We know (from analyzing the server's Dockerfile) that the server is using `socat` to wait for an incoming TCP connection and then run `main`.  
 `main` is then reading information from `stdin` and writes it to `buffer`. We can tell when `main` stops executing if we look at the TCP connection, for example, using *Wireshark*:  
 
 ![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/Capture1.PNG)  
