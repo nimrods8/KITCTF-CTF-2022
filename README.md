@@ -42,7 +42,7 @@ int main() {
 ```
 <br><br>
 The main function is setting up a timeout of 10 seconds. This is the time frame we have until the server side exits.
-Then, allocates 100 bytes for `buf` on the stack, opens the flag.txt file, reports to the client the file descriptor (fd) of the opened file and sets the sandbox using `seccomp`: all syscalls are banned but the `read` syscall!<br><br>
+Then, allocates 100 bytes for `buffer` on the stack, opens the flag.txt file, reports to the client the file descriptor (fd) of the opened file and sets the sandbox using `seccomp`: all syscalls are banned but the `read` syscall!<br><br>
 At the bottom `main` is reading from `stdin` upto 0x1000 bytes. 
 <br>
 *This is clearly a stack overflow waiting to happen!*  
