@@ -310,24 +310,25 @@ Going back to the gdb session, we find a good candidate at address *4012a9*:
 Combining that with a small `NOP` sled and the useful `jmp rsi`, our lower part of stack would look something like this:
 ![](https://github.com/nimrods8/KITCTF-CTF-2022/blob/main/be_brave2.PNG)  
   
-The original return address is at *7fffffffe458*. The CPU is simply loading whatever is in that address to the RIP register.  
-So, the next execution would be the code at *0x4012a9*:
+The original return address is at *7fffffffe458*. When executing the `ret` opcode, the CPU is simply loading whatever is in that address to the RIP register.  
+So, the next execution would be the code at *0x4012a9*:  
 
-`pop rbx`   - this opcode would consume the next 8 bytes of the stack, and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*.  
-`ret`       - this opcode, again, takes the contents of the stack, where the RSP points to, and loads it to RIP...
+`pop rbx`   - this opcode would consume the next 8 bytes of the stack (marked in the yellow rectangle), and (incidentally) place them in RBP. The new RSP would now point to *7fffffffe468*.  
+`ret`       - this opcode, again, takes the contents of the stack, where the RSP points to, and loads it to RIP. This is pointing to values in the blue rectangle.  
 So, we'll be sliding down the stack using return-oriented-execution from `main` itself.  
   
-As you'll notice, at the bottom we are left with just one 8-byte slice, so we can't use the `pop rbx` anymore. This is why we use the return address of *0x4012aa* which is just the `ret` part of the duo.  
-The next address on the stack which we are about to jump to is currently *7fffffffe500*, which changes execution up to our the shellcode we injected earlier.  
+As you'll notice, at the bottom we are left with just one 8-byte slice (marked in the pink rectangle), so we can't use the `pop rbx` trick anymore. This is why we use the return address of *0x4012aa* which is just the `ret` part of the duo.  
+The next address on the stack which we are about to jump to is currently *7fffffffe500* (in the green rectangle), which changes execution up to our shellcode, which we injected earlier, and specifically to *7fffffffe500*.  
+  
 So, now the server will be running:
 ```
-    nop
-    nop
-    nop
-    nop
-    jmp rsi
+90       nop
+90       nop
+90       nop
+90       nop
+ff e6    jmp rsi
 ```  
-Since RSI contains the address of the original `buffer`, we now have code execution on the server, and naturally, we can have more shellcode injected there...
+Since RSI still contains the address of the original `buffer`, we now have code execution on the server, and naturally, we can have more shellcode injected there...
   
   
   
