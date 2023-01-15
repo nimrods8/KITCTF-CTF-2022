@@ -318,7 +318,7 @@ So, the next execution would be the code at *0x4012a9*:
 So, we'll be sliding down the stack using return-oriented-execution from `main` itself.  
   
 As you'll notice, at the bottom we are left with just one 8-byte slice (marked in the pink rectangle), so we can't use the `pop rbx` trick anymore. This is why we use the return address of *0x4012aa* which is just the `ret` part of the duo.  
-The next address on the stack which we are about to jump to is currently *7fffffffe500* (in the green rectangle), which changes execution up to our shellcode, which we injected earlier, and specifically to *7fffffffe500*.  
+The next address on the stack which we are about to jump to is currently *7fffffffe500* (in the green rectangle), which changes execution up to our shellcode, that we injected earlier.  
   
 So, now the server will be running:
 ```
