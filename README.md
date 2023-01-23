@@ -88,7 +88,7 @@ We have a number of options:
 - Another option is to find another address already in the stack that we can slightly change to cause a beneficial code execution to us.  
 
  
-*(a) Testing for Static Stack Addresses*
+*(a) Testing for Static Stack Addresses*  
 gdb is, by default, disabling ASLR, so we can see the static stack addresses there.
 By running `info proc mappings` we get:  
 `0x7ffffffde000     0x7ffffffff000    0x21000        0x0  rwxp   [stack]`  
